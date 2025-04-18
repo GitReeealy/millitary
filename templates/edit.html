@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Редактирование записи в {{ model }}</h2>
+<form method="POST" class="form-container">
+    <fieldset>
+        <legend>Основные данные</legend>
+        {% for column in record.__table__.columns %}
+            {% if column.name != 'id' and column.name != 'specialization_id' and column.name != 'service_id' and column.name != 'doctor_id' and column.name != 'patient_id' and column.name not in related_fields %}
+                <div class="form-group">
+                    <label for="{{ column.name }}">{{ column_labels.get(column.name, column.name) }}</label>
+                    <input type="text" name="{{ column.name }}" id="{{ column.name }}" value="{{ getattr(record, column.name) }}" required>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </fieldset>
+
+    {% if 'specialization' in related_fields %}
+        <fieldset>
+            <legend>Специализация</legend>
+            <div class="form-group">
+                <label for="specialization_id">Выберите специализацию:</label>
+                <div class="dropdown">
+                    <button type="button" class="dropdown-button" id="specialization_dropdown">
+                        {{ record.specialization.name if record.specialization else '-- Выберите специализацию --' }}
+                    </button>
+                    <div class="dropdown-content">
+                        {% for specialization in Specialization.query.all() %}
+                        <a href="#" class="specialization-option" data-value="{{ specialization.id }}">{{ specialization.name }}</a>
+                        {% endfor %}
+                    </div>
+                </div>
+                <input type="hidden" name="specialization_id" id="specialization_id" value="{{ record.specialization_id }}">
+            </div>
+        </fieldset>
+    {% endif %}
+
+    {% if 'doctor' in related_fields %}
+        <fieldset>
+            <legend>Врач</legend>
+            <div class="form-group">
+                <label for="doctor_id">Выберите врача:</label>
+                <div class="dropdown">
+                    <button type="button" class="dropdown-button" id="doctor_dropdown">
+                        {{ record.doctor.full_name if record.doctor else '-- Выберите врача --' }}
+                    </button>
+                    <div class="dropdown-content">
+                        {% for doctor in Doctor.query.all() %}
+                        <a href="#" class="doctor-option" data-value="{{ doctor.id }}">{{ doctor.full_name }}</a>
+                        {% endfor %}
+                    </div>
+                </div>
+                <input type="hidden" name="doctor_id" id="doctor_id" value="{{ record.doctor_id }}">
+            </div>
+        </fieldset>
+    {% endif %}
+
+    {% if 'patient' in related_fields %}
+        <fieldset>
+            <legend>Призывник</legend>
+            <div class="form-group">
+                <label for="patient_id">Выберите призывника:</label>
+                <div class="dropdown">
+                    <button type="button" class="dropdown-button" id="patient_dropdown">
+                        {{ record.patient.full_name if record.patient else '-- Выберите призывника --' }}
+                    </button>
+                    <div class="dropdown-content">
+                        {% for patient in Patient.query.all() %}
+                        <a href="#" class="patient-option" data-value="{{ patient.id }}">{{ patient.full_name }}</a>
+                        {% endfor %}
+                    </div>
+                </div>
+                <input type="hidden" name="patient_id" id="patient_id" value="{{ record.patient_id }}">
+            </div>
+        </fieldset>
+    {% endif %}
+
+    {% if 'service' in related_fields %}
+    <fieldset>
+        <legend>Услуга</legend>
+        <div class="form-group">
+            <label for="service_id">Выберите услугу:</label>
+            <div class="dropdown">
+                <button type="button" class="dropdown-button" id="service_dropdown">
+                    {{ record.service.name if record.service else '-- Выберите услугу --' }}
+                </button>
+                <div class="dropdown-content">
+                    {% for service in Service.query.all() %}
+                    <a href="#" class="service-option" data-value="{{ service.id }}">{{ service.name }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+            <input type="hidden" name="service_id" id="service_id" value="{{ record.service_id }}">
+        </div>
+    </fieldset>
+    {% endif %}
+
+    <button type="submit" class="submit">Сохранить</button>
+</form>
+{% endblock %}

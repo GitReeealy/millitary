@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title if title else "Сайт" }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header>
+    <div class="container header-container">
+        <h1>
+            <a href="{{ url_for('common.index') }}" class="logo">Система управления военкоматом "Призыву ДА!"</a>
+        </h1>
+        <nav class="nav-bar">
+            <div class="dropdown nav-item">
+                <button class="dropdown-button">Карта сайта</button>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('common.list_items', model='patient') }}">Список призывников</a>
+                    <a href="{{ url_for('common.list_items', model='doctor') }}">Список врачей</a>
+                    <a href="{{ url_for('common.list_items', model='specialization') }}">Список специализаций</a>
+                    <a href="{{ url_for('common.list_items', model='schedule') }}">Список расписания</a>
+                    <a href="{{ url_for('common.list_items', model='appointment') }}">Список приемов</a>
+                    <a href="{{ url_for('common.list_items', model='review') }}">Список уведомлений</a>
+                </div>
+            </div>
+        </nav>
+    </div>
+</header>
+
+<div class="flash-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="flash flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+</div>
+
+<main>
+    <div class="container main-container">
+        {% block content %}
+        {% endblock %}
+    </div>
+</main>
+
+<script>
+    // Автоматическое скрытие флэш-сообщений
+    setTimeout(() => {
+        document.querySelectorAll('.flash').forEach(el => el.remove())
+    }, 5000);
+
+    function setupDropdown(dropdownId, hiddenInputId) {
+        const dropdownButton = document.getElementById(`${dropdownId}_dropdown`);
+        const hiddenInput = document.getElementById(hiddenInputId);
+
+        if (!dropdownButton || !hiddenInput) {
+            console.log(`Пропускаем настройку для ${dropdownId}, элементы не найдены.`);
+            return;
+        }
+
+        const dropdownContent = dropdownButton.closest('.dropdown').querySelector('.dropdown-content');
+        if (!dropdownContent) {
+            console.error(`Ошибка: .dropdown-content для ${dropdownId} не найден.`);
+            return;
+        }
+
+        dropdownContent.querySelectorAll("a").forEach(link => {
+            link.addEventListener("click", function (e) {
+                e.preventDefault();
+                const value = this.getAttribute("data-value");
+                const text = this.textContent;
+
+                hiddenInput.value = value;
+                dropdownButton.textContent = text;
+            });
+        });
+    }
+
+    setupDropdown("specialization", "specialization_id");
+    setupDropdown("doctor", "doctor_id");
+    setupDropdown("patient", "patient_id");
+    setupDropdown("service", "service_id");
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        console.log("Страница загружена, проверяем путь: ", window.location.pathname);
+        if (window.location.pathname !== "/appointment") return;
+
+        let table = document.querySelector("table");
+        if (!table) {
+            console.warn("Таблица с приемами не найдена!");
+            return;
+        }
+
+        console.log("Таблица найдена, добавляем контейнер расписания");
+        let scheduleContainer = document.createElement("div");
+        scheduleContainer.id = "schedule-container";
+        scheduleContainer.style.display = "none";
+        table.parentNode.insertBefore(scheduleContainer, table);
+
+        let currentDate = new Date();
+
+        function formatDate(date) {
+            return date.toLocaleDateString("ru-RU").split('.').join('.');
+        }
+
+        function fetchSchedule(doctorName, date) {
+            console.log(`Запрос расписания для врача: ${doctorName} на ${date}`);
+            let schedule = [];
+
+            document.querySelectorAll("tbody tr").forEach(row => {
+                let doctorElement = row.querySelector("td:nth-child(3) p strong");
+                if (!doctorElement) return;
+                let doctor = doctorElement.nextSibling.nodeValue.trim();
+                let dateTimeElement = row.querySelector("td:nth-child(4)");
+                if (!dateTimeElement) return;
+                let dateTimeText = dateTimeElement.textContent.trim();
+                let [appointmentDate, appointmentTime] = dateTimeText.includes(', ') ? dateTimeText.split(', ') : [dateTimeText, ""];
+                let patientElement = row.querySelector("td:nth-child(2) p strong");
+                if (!patientElement) return;
+                let patient = patientElement.nextSibling.nodeValue.trim();
+
+                console.log(`Найден прием: Врач - ${doctor}, Дата - ${appointmentDate}, Время - ${appointmentTime}, Пациент - ${patient}`);
+                console.log(doctor, doctorName, appointmentDate, date, doctor === doctorName, appointmentDate === date)
+                if (doctor === doctorName && appointmentDate === date) {
+                    schedule.push({ time: appointmentTime || "Время не указано", patient });
+                }
+            });
+
+            console.log(`Найдено ${schedule.length} приемов`);
+            renderSchedule(doctorName, date, schedule);
+        }
+
+        function renderSchedule(doctorName, date, schedule) {
+            console.log(`Отображаем расписание для ${doctorName} на ${date}`);
+            scheduleContainer.innerHTML = `
+            <h3>Расписание врача ${doctorName} на ${date}</h3>
+            <button id="prev-day">← Назад</button>
+            <button id="next-day">Вперед →</button>
+            <ul>${schedule.length ? schedule.map(appt => `<li>${appt.time}: ${appt.patient}</li>`).join('') : '<li>Нет приемов</li>'}</ul>
+        `;
+            scheduleContainer.style.display = "block";
+
+            document.getElementById("prev-day").addEventListener("click", function () {
+                console.log("Листаем расписание назад");
+                currentDate.setDate(currentDate.getDate() - 1);
+                fetchSchedule(doctorName, formatDate(currentDate));
+            });
+
+            document.getElementById("next-day").addEventListener("click", function () {
+                console.log("Листаем расписание вперед");
+                currentDate.setDate(currentDate.getDate() + 1);
+                fetchSchedule(doctorName, formatDate(currentDate));
+            });
+        }
+
+        document.querySelectorAll("td:nth-child(3)").forEach(doctorCell => {
+            let doctorElement = doctorCell.querySelector("p strong");
+            if (!doctorElement) return;
+            doctorCell.addEventListener("click", function () {
+                let doctorName = doctorElement.nextSibling.nodeValue.trim();
+                console.log(`Выбран врач: ${doctorName}`);
+                currentDate = new Date();
+                fetchSchedule(doctorName, formatDate(currentDate));
+            });
+        });
+
+        console.log("Скрипт расписания загружен и готов к работе");
+    });
+
+</script>
+</body>
+</html>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+    function downloadPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'pt', 'a4');
+        const table = document.querySelector('table');
+
+        // 1. Применяем принудительные стили перед генерацией
+        const originalStyles = [];
+        const elements = table.querySelectorAll('*');
+
+        elements.forEach(el => {
+            originalStyles.push({
+                element: el,
+                color: el.style.color,
+                backgroundColor: el.style.backgroundColor
+            });
+
+            el.style.color = '#000000'; // Чёрный текст
+            el.style.backgroundColor = '#FFFFFF'; // Белый фон
+            el.style.fontWeight = 'normal';
+        });
+
+        // 2. Скрываем колонку "Действия"
+        const actionHeader = Array.from(table.rows[0].cells).find(
+            cell => cell.textContent.trim() === 'Действия'
+        );
+        const actionColumnIndex = actionHeader ? Array.from(table.rows[0].cells).indexOf(actionHeader) : -1;
+
+        if (actionColumnIndex !== -1) {
+            table.querySelectorAll('tr').forEach(row => {
+                if (row.cells[actionColumnIndex]) {
+                    row.cells[actionColumnIndex].style.display = 'none';
+                }
+            });
+        }
+
+        // 3. Генерируем PDF с улучшенными настройками
+        html2canvas(table, {
+            scale: 2,
+            logging: true,
+            useCORS: true,
+            backgroundColor: '#FFFFFF',
+            onclone: (clonedDoc) => {
+                // Дополнительная гарантия чёрного текста
+                clonedDoc.querySelectorAll('*').forEach(el => {
+                    el.style.color = '#000000';
+                    el.style.backgroundColor = '#FFFFFF';
+                });
+            }
+        }).then((canvas) => {
+            const imgData = canvas.toDataURL('image/png');
+            const imgWidth = doc.internal.pageSize.getWidth() - 40; // Уменьшаем ширину для полей
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            doc.addImage(imgData, 'PNG', 20, 20, imgWidth, imgHeight);
+            doc.save('table_export.pdf');
+
+            // 4. Восстанавливаем исходные стили и колонку
+            originalStyles.forEach(style => {
+                style.element.style.color = style.color;
+                style.element.style.backgroundColor = style.backgroundColor;
+            });
+
+            if (actionColumnIndex !== -1) {
+                table.querySelectorAll('tr').forEach(row => {
+                    if (row.cells[actionColumnIndex]) {
+                        row.cells[actionColumnIndex].style.display = '';
+                    }
+                });
+            }
+        });
+    }
+</script>

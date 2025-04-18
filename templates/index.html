@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Добро пожаловать!</h2>
+
+<div class="category">
+    <h3>Управление системой</h3>
+    <ul>
+        <li>
+            <a href="{{ url_for('common.list_items', model='patient') }}">Призывники</a>
+            <a href="{{ url_for('common.add', model='patient') }}" class="btn">Добавить</a>
+        </li>
+        <li>
+            <a href="{{ url_for('common.list_items', model='doctor') }}">Врачи</a>
+            <a href="{{ url_for('common.add', model='doctor') }}" class="btn">Добавить</a>
+        </li>
+        <li>
+            <a href="{{ url_for('common.list_items', model='specialization') }}">Специализации</a>
+            <a href="{{ url_for('common.add', model='specialization') }}" class="btn">Добавить</a>
+        </li>
+        <li>
+            <a href="{{ url_for('common.list_items', model='schedule') }}">Расписание событий</a>
+            <a href="{{ url_for('common.add', model='schedule') }}" class="btn">Добавить</a>
+        </li>
+        <li>
+            <a href="{{ url_for('common.list_items', model='appointment') }}">Приемы</a>
+            <a href="{{ url_for('common.add', model='appointment') }}" class="btn">Добавить</a>
+        <li>
+            <a href="{{ url_for('common.list_items', model='review') }}">Уведомления</a>
+            <a href="{{ url_for('common.add', model='review') }}" class="btn">Добавить</a>
+        </li>
+    </ul>
+</div>
+{% endblock %}
